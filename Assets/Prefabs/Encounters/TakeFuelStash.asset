@@ -14,5 +14,5 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _text: Lets take it.
   _followOnEncounter: {fileID: 11400000, guid: 26f4c2194e964a9479788227be13f90f, type: 2}
-  _statSignal: ChangeFuel
+  _stockName: Fuel
   _amount: 10

@@ -77,7 +77,12 @@ namespace DaleranGames
             }
             var hookList = _signals[data.SignalName];
             ISignalData result = data;
-            foreach(SignalPriorityWrapper signal in hookList)
+
+            // We iterate over an isolated copy in case some events are added
+            // Or modified during the execution of an event.
+            var hooksCopy = new SignalPriorityWrapper[hookList.Count];
+            hookList.CopyTo(hooksCopy, 0);
+            foreach(SignalPriorityWrapper signal in hooksCopy)
             {
                 result = signal?.Signal(result);
             }

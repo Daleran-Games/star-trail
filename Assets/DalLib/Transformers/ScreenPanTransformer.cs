@@ -33,13 +33,13 @@ namespace DaleranGames.Transformers
         {
             Vector2 moveDir = new Vector2();
 
-            if (Input.mousePosition.x > Screen.width - PanBorderThickness)
+            if (Input.mousePosition.x > Screen.width - PanBorderThickness && Input.mousePosition.x < Screen.width)
                 moveDir.x = PanSpeed;
-            if (Input.mousePosition.x < PanBorderThickness)
+            if (Input.mousePosition.x < PanBorderThickness && Input.mousePosition.x > 0)
                 moveDir.x = -PanSpeed;
-            if (Input.mousePosition.y > Screen.height - PanBorderThickness)
+            if (Input.mousePosition.y > Screen.height - PanBorderThickness && Input.mousePosition.y < Screen.height)
                 moveDir.y = PanSpeed;
-            if (Input.mousePosition.y < PanBorderThickness)
+            if (Input.mousePosition.y < PanBorderThickness && Input.mousePosition.y > 0)
                 moveDir.y = -PanSpeed;
 
             transform.position += (Vector3)moveDir.normalized * PanSpeed * Time.deltaTime;

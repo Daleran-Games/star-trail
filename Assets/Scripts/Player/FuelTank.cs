@@ -3,52 +3,27 @@ using UnityEngine;
 
 namespace DaleranGames.StarTrail
 {
-    public class FuelTank : MonoBehaviour
+    public class FuelTank : Stock
     {
         [SerializeField]
-        private float _fuelPerDay = 1f;
+        private string _name;
 
         [SerializeField]
-        private float _currentFuel = 10f;
+        private float _baseMaxFuel;
+        private Stat.Modifier _maxFuelMod;
 
-        [SerializeField]
-        private float _maxFuel = 10f;
-
-        // Use this for initialization
-        void OnEnable()
+        protected override void OnEnable()
         {
-            Signals.Listen("StartOfDay", OnStartOfDay);
-            Signals.Listen("ChangeFuel", OnChangeFuel);
+            base.OnEnable();
+            _maxFuelMod = new Stat.Modifier(Stat.Modifier.Operand.Base, _baseMaxFuel, _name);
+            _maxStat.AddModifier(_maxFuelMod);
+            Change(_maxStat.CurrentValue);
         }
 
-        public ISignalData OnStartOfDay(ISignalData data)
+        protected override void OnDisable()
         {
-            var newDay = (SignalData<int>)data;
-            _currentFuel -= _fuelPerDay;
-
-            if (_currentFuel < 1)
-            {
-                _currentFuel = 0;
-                Signals.Raise(new SignalData<FuelTank>("OutOfFuel", this));
-            }
-            return data;
-        }
-
-        public ISignalData OnChangeFuel(ISignalData data)
-        {
-            var amount = (SignalData<int>)data;
-            AddFuel(amount.Data);
-            return data;
-        }
-
-        // TODO: Needs testing
-        public void AddFuel (int amount)
-        {
-            _currentFuel += amount;
-            if (_currentFuel > _maxFuel)
-            {
-                _currentFuel = _maxFuel;
-            }
+            base.OnDisable();
+            _maxStat.RemoveModifier(_maxFuelMod);
         }
     }
 }

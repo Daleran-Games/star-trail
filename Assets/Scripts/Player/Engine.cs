@@ -7,49 +7,65 @@ namespace DaleranGames.StarTrail
     public class Engine : MonoBehaviour
     {
         [SerializeField]
-        private StatModifier _speed = new StatModifier(StatModifier.Operand.Base, 1f, "Engine Mark 1");
+        private string _name;
 
         [SerializeField]
-        private StatModifier _fuelBurnRate = new StatModifier(StatModifier.Operand.Base, 1f, "Engine Mark 1");
+        private Stat _speedStat;
 
         [SerializeField]
-        private string _description = "Engine Mark 1";
+        private float _baseSpeed;
+        private Stat.Modifier _speedMod;
 
-        private StatCalculator _statCalculator = new StatCalculator();
+        [SerializeField]
+        private Stat _fuelBurnRate;
+
+        [SerializeField]
+        private float _baseFuelBurnRate;
+        private Stat.Modifier _fuelBurnRateMod;
+
+        [SerializeField]
+        private FuelTank _fuelTank;
+
+        private Signal _fuelAtMinSig;
+        private Signal _fuelChangedSig;
 
         private void OnEnable()
         {
-            Signals.Listen("StatSpeed", OnStatSpeed, 100);
-            Signals.Listen("StatSpeed", OnStatSpeedCalc, 300);
-            Signals.Listen("StatFuelBurnRate", OnStatFuelBurnRate, 100);
-            Signals.Listen("StatFuelBurnRate", OnStatFuelBurnRateCalc, 300);
-
+            _speedMod = new Stat.Modifier(Stat.Modifier.Operand.Base, _baseSpeed, _name);
+            _fuelBurnRateMod = new Stat.Modifier(Stat.Modifier.Operand.Base, _baseFuelBurnRate, _name);
+            _speedStat.AddModifier(_speedMod);
+            _fuelBurnRate.AddModifier(_fuelBurnRateMod);
+            _fuelAtMinSig = OnFuelAtMin;
+            _fuelChangedSig = OnFuelChanged;
+            Signals.Listen(Stock.AtMinSignal("Fuel"), _fuelAtMinSig);
         }
 
-        public ISignalData OnStatSpeed(ISignalData data)
+        private void OnDisable()
         {
-            var statMods = (StatModifierSignal)data;
-            statMods.AddModifier(_speed);
-            statMods.Description = _description;
+            _speedStat.RemoveModifier(_speedMod);
+            _fuelBurnRate.RemoveModifier(_fuelBurnRateMod);
+            Signals.Quiet(Stock.AtMinSignal("Fuel"), _fuelAtMinSig);
+        }
+
+        public ISignalData OnFuelAtMin(ISignalData data)
+        {
+            _speedStat.RemoveModifier(_speedMod);
+            _fuelBurnRate.RemoveModifier(_fuelBurnRateMod);
+            Signals.Listen(Stock.ChangedSignal("Fuel"), _fuelChangedSig);
             return data;
         }
 
-        public ISignalData OnStatSpeedCalc(ISignalData data)
+        public ISignalData OnFuelChanged(ISignalData data)
         {
-            return _statCalculator.Calculate((StatModifierSignal)data);
-        }
+            var fuel = (SignalData<Stock>)data;
 
-        public ISignalData OnStatFuelBurnRate(ISignalData data)
-        {
-            var statMods = (StatModifierSignal)data;
-            statMods.AddModifier(_fuelBurnRate);
-            statMods.Description = _description;
+            if (fuel.Data.CurrentValue > 0)
+            {
+                _speedStat.AddModifier(_speedMod);
+                _fuelBurnRate.AddModifier(_fuelBurnRateMod);
+                Signals.Quiet(Stock.ChangedSignal("Fuel"), _fuelChangedSig);
+            }
             return data;
-        }
-
-        public ISignalData OnStatFuelBurnRateCalc(ISignalData data)
-        {
-            return _statCalculator.Calculate((StatModifierSignal)data);
         }
     }
 }

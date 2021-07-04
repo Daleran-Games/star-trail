@@ -16,7 +16,7 @@ namespace DaleranGames.StarTrail
 
         private float _arrivalTolerance = 0.1f;
 
-        private StatModifierSignal _speedStat;
+        private Stat _speedStat;
 
         public enum Status
         {
@@ -61,14 +61,15 @@ namespace DaleranGames.StarTrail
             _currentLocation = start.gameObject.GetRequiredComponent<Place>();
             _travelLog.Add(_currentLocation);
             Signals.Raise(new PlayerArriveLocationSignal((Location)_currentLocation, this));
-            _speedStat = (StatModifierSignal)Signals.Raise(new StatModifierSignal("Speed"));
-            Debug.Log(_speedStat.FinalValue + " / " + _speedStat.Description);
+            var speedStatSigData = (SignalData<Stat>)Signals.Raise(new SignalData<Stat>("StatSpeedGet", null));
+            _speedStat = speedStatSigData.Data;
+            Debug.Log(_speedStat.CurrentValue + " / " + _speedStat.Id);
         }
 
         private void OnEnable()
         {
             Signals.Listen("LocationClick", OnLocationClick);
-            Signals.Listen("OutOfFuel", OnOutOfFuel);
+            Signals.Listen(Stock.AtMinSignal("Fuel"), OnOutOfFuel);
             Signals.Listen("NavStatusChange", OnNavStatusChange);
         }
 
@@ -117,7 +118,7 @@ namespace DaleranGames.StarTrail
         {
             if (_currentStatus == Status.Moving && _destination != null)
             {
-                var step = _speedStat.FinalValue * Time.deltaTime;
+                var step = _speedStat.CurrentValue * Time.deltaTime;
                 var movement = (_destination.transform.position - transform.position).normalized * step;
                 transform.position += movement;
             }
@@ -146,13 +147,13 @@ namespace DaleranGames.StarTrail
             transform.position = _currentLocation.transform.position;
         }
 
-        public ISignalData OnOutOfFuel(ISignalData data)
+        private ISignalData OnOutOfFuel(ISignalData data)
         {
-            _currentStatus = Status.Hold;
+            // _currentStatus = Status.Hold;
             return data;
         }
 
-        public ISignalData OnNavStatusChange(ISignalData data)
+        private ISignalData OnNavStatusChange(ISignalData data)
         {
             var status = (SignalData<Status>)data;
             _currentStatus = status.Data;

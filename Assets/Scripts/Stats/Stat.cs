@@ -8,15 +8,14 @@ namespace DaleranGames.StarTrail
     public class Stat : MonoBehaviour
     {
         [SerializeField]
-        private string _statName;
-        public string StatName { get { return _statName; } }
+        private string _id;
+        public string Id { get { return _id; } }
 
-        [SerializeField]
-        private float _previousValue;
-        public float PreviousValue { get { return _previousValue; } }
+        
 
         [SerializeField]
         private float _currentValue;
+        private float _previousValue;
         public float CurrentValue { get { return _currentValue; } }
 
         [SerializeField]
@@ -27,10 +26,19 @@ namespace DaleranGames.StarTrail
         private List<Modifier> _modifiers;
         public List<Modifier> Modifiers { get { return _modifiers; } }
 
-        Signal GetStat;
-        Signal ModifyStat;
+        private Signal _getStatSig;
+        private Signal _addModSig;
+        private Signal _removeModSig;
 
-        [System.Serializable]
+        // Listened
+        public static string GetSignal(string id) { return $"Stat{id}Get"; }
+        public static string AddModSignal(string id) { return $"Stat{id}AddMod"; }
+        public static string RemoveModSignal(string id) { return $"Stat{id}RemoveMod"; }
+
+        // Raised
+        public static string ModifiedSignal(string id) { return $"Stock{id}Modified"; }
+
+        [Serializable]
         public class Modifier: IEquatable<Modifier>, IComparable<Modifier>, IComparable
         {
             public enum Operand
@@ -111,27 +119,38 @@ namespace DaleranGames.StarTrail
 
         protected virtual void OnEnable()
         {
-            GetStat = OnGetStat;
-            ModifyStat = OnModifyStat;
-            Signals.Listen($"GetStat{_statName}", GetStat, 100);
-            Signals.Listen($"ModifyStat{_statName}", ModifyStat, 100);
+            _currentValue = Calculate();
+            _getStatSig = OnGetStat;
+            _addModSig = OnAddMod;
+            _removeModSig = OnRemoveMod;
+            Signals.Listen(GetSignal(_id), _getStatSig);
+            Signals.Listen(AddModSignal(_id), _addModSig);
+            Signals.Listen(RemoveModSignal(_id), _removeModSig);
         }
 
         protected virtual void OnDisable()
         {
-            Signals.Quiet($"GetStat{_statName}", GetStat, 100);
-            Signals.Quiet($"ModifyStat{_statName}", ModifyStat, 100);
+            Signals.Quiet(GetSignal(_id), _getStatSig);
+            Signals.Quiet(AddModSignal(_id), _addModSig);
+            Signals.Quiet(RemoveModSignal(_id), _removeModSig);
         }
 
-        public ISignalData OnGetStat(ISignalData data)
+        private ISignalData OnGetStat(ISignalData data)
         {
-            return new SignalData<Stat>($"GetStat{_statName}", this);
+            return new SignalData<Stat>(GetSignal(_id), this);
         }
 
-        public ISignalData OnModifyStat(ISignalData data)
+        private ISignalData OnAddMod(ISignalData data)
         {
             var mod = (SignalData<Modifier>)data;
             AddModifier(mod.Data);
+            return data;
+        }
+
+        private ISignalData OnRemoveMod(ISignalData data)
+        {
+            var mod = (SignalData<Modifier>)data;
+            RemoveModifier(mod.Data);
             return data;
         }
 
@@ -140,7 +159,7 @@ namespace DaleranGames.StarTrail
             _previousValue = _currentValue;
             _modifiers.Add(mod);
             _currentValue = Calculate();
-            Signals.Raise(new SignalData<Stat>($"Stat{_statName}Modified", this));
+            Signals.Raise(new SignalData<Stat>(ModifiedSignal(_id), this));
         }
 
         public void RemoveModifier(Modifier mod)
@@ -148,7 +167,7 @@ namespace DaleranGames.StarTrail
             _previousValue = _currentValue;
             _modifiers.Remove(mod);
             _currentValue = Calculate();
-            Signals.Raise(new SignalData<Stat>($"Stat{_statName}Modified", this));
+            Signals.Raise(new SignalData<Stat>(ModifiedSignal(_id), this));
         }
 
         public virtual float Calculate()
@@ -162,7 +181,7 @@ namespace DaleranGames.StarTrail
                 {
                     if (baseVal != 0)
                     {
-                        Debug.LogWarning($"Multiple base values detected. Stat: {StatName} Modifier: {mod.Description}");
+                        Debug.LogWarning($"Multiple base values detected. Stat: {Id} Modifier: {mod.Description}");
                     }
 
                     baseVal = mod.Amount;
